@@ -1,4 +1,3 @@
-import axios from 'axios';
 import xmlParser from 'fast-xml-parser';
 import got from 'got';
 

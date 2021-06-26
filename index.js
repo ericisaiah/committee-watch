@@ -4,7 +4,6 @@ import mongoose from 'mongoose';
 import fs from 'fs';
 import YAML from 'yaml';
 import got from 'got';
-import axios from 'axios';
 import CommitteeEventSchema from './models/CommitteeEvent.js';
 import CommitteeDataLoader from './services/CommitteeDataLoader.js';
 import VideoLoader from './services/VideoLoader.js';
