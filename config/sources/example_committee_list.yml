@@ -1,0 +1,36 @@
+- type: house
+  name: House Committee on Agriculture
+  url: https://agriculture.house.gov/
+  minority_url: https://republicans-agriculture.house.gov
+  thomas_id: HSAG
+  house_committee_id: AG
+  subcommittees:
+  - name: Conservation and Forestry
+    thomas_id: '15'
+    address: 1301 LHOB; Washington, DC 20515
+    phone: (202) 225-2171
+  - name: Commodity Exchanges, Energy, and Credit
+    thomas_id: '22'
+    address: 1301 LHOB; Washington, DC 20515
+    phone: (202) 225-2171
+  - name: General Farm Commodities and Risk Management
+    thomas_id: '16'
+    address: 1301 LHOB; Washington, DC 20515
+    phone: (202) 225-2171
+  - name: Livestock and Foreign Agriculture
+    thomas_id: '29'
+    address: 1301 LHOB; Washington, DC 20515
+    phone: (202) 225-2171
+  - name: Biotechnology, Horticulture, and Research
+    thomas_id: '14'
+    address: 1301 LHOB; Washington, DC 20515
+    phone: (202) 225-2171
+  - name: Nutrition, Oversight, and Department Operations
+    thomas_id: '03'
+    address: 1301 LHOB; Washington, DC 20515
+    phone: (202) 225-2171
+  address: 1301 LHOB; Washington, DC 20515-6001
+  phone: (202) 225-2171
+  rss_url: https://agriculture.house.gov/Rss.aspx?GroupID=1
+  jurisdiction: The House Committee on Agriculture has legislative jurisdiction over
+    agriculture, food, rural development, and forestry.

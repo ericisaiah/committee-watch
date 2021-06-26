@@ -1,0 +1,31 @@
+{
+  "name": "committee-watch",
+  "version": "1.0.0",
+  "description": "Finding discrepancies between published committee hearing videos and those that are archived by the LOC at Congress.gov.",
+  "main": "index.js",
+  "scripts": {
+    "test": "test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/ericisaiah/committee-watch.git"
+  },
+  "type": "module",
+  "author": "Eric Lukoff",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/ericisaiah/committee-watch/issues"
+  },
+  "homepage": "https://github.com/ericisaiah/committee-watch#readme",
+  "dependencies": {
+    "axios": "^0.21.1",
+    "dotenv": "^10.0.0",
+    "express": "^4.17.1",
+    "fast-xml-parser": "^3.19.0",
+    "got": "^11.8.2",
+    "lodash": "^4.17.21",
+    "mongoose": "^5.12.14",
+    "redis": "^3.1.2",
+    "yaml": "^1.10.2"
+  }
+}
