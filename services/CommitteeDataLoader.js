@@ -1,10 +1,14 @@
+import mongoose from 'mongoose';
 import xmlParser from 'fast-xml-parser';
 import got from 'got';
 
+import CommitteeEventSchema from '../models/CommitteeEvent.js';
+
+
 export default class CommitteeDataLoader {
 
-  constructor(CommitteeEventModel) {
-    this.CommitteeEvent = CommitteeEventModel;
+  constructor() {
+    this.CommitteeEvent = mongoose.model('CommitteeEvent', CommitteeEventSchema);
   }
 
   // Load the committee's events and store them so later we can match to
@@ -36,7 +40,8 @@ export default class CommitteeDataLoader {
         title: eventItem.title,
         committeeEventUrl: eventItem.link,
         description: eventItem.description,
-        publishedDate: eventItem.pubDate
+        publishedDate: eventItem.pubDate,
+        lastRetrievedVideo: Date.now()
       }, {
         upsert: true
       }).catch((err) => {
@@ -50,6 +55,10 @@ export default class CommitteeDataLoader {
       committeeId: committeeId,
       youtubeId: null
     });
+  }
+
+  getAllEvents() {
+    return this.CommitteeEvent.find();
   }
 
 }

@@ -18,10 +18,13 @@
   },
   "homepage": "https://github.com/ericisaiah/committee-watch#readme",
   "dependencies": {
+    "@googleapis/sheets": "^0.3.0",
+    "csv-writer": "^1.6.0",
     "dotenv": "^10.0.0",
     "express": "^4.17.1",
     "fast-xml-parser": "^3.19.0",
     "got": "^11.8.2",
+    "lodash": "^4.17.21",
     "mongoose": "^5.12.14",
     "yaml": "^1.10.2"
   }

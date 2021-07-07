@@ -1,11 +1,15 @@
+import mongoose from 'mongoose';
 import fs from 'fs';
 import YAML from 'yaml';
 import got from 'got';
 
+import CommitteeEventSchema from '../models/CommitteeEvent.js';
+
+
 export default class VideoLoader {
 
-  constructor(CommitteeEventModel, apiKey) {
-    this.CommitteeEvent = CommitteeEventModel;
+  constructor(apiKey) {
+    this.CommitteeEvent = mongoose.model('CommitteeEvent', CommitteeEventSchema);
     this.apiKey = apiKey;
 
     const idsFile = fs.readFileSync('./config/sources/youtube_ids.yml', 'utf8');
