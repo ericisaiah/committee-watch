@@ -11,18 +11,15 @@ export default class VideoLoader {
   constructor(apiKey) {
     this.CommitteeEvent = mongoose.model('CommitteeEvent', CommitteeEventSchema);
     this.apiKey = apiKey;
-
-    const idsFile = fs.readFileSync('./config/sources/youtube_ids.yml', 'utf8');
-    this.channelIds = YAML.parse(idsFile);
   }
 
   // Each committee's hearings' YouTube videos should be 'tagged' with the LOC
-  // event ID in the title or description fields in the format "(EventID=12345)"
-  async loadAndMatch(committeeId) {
+  // event ID in the title or description fields in the format "EventID=12345"
+  async loadAndMatch(youtubeId) {
     
     const EVENT_ID_REGEX = /EventID\=(\d+)/i;
 
-    const videos = await this.loadVideos(committeeId);
+    const videos = await this.loadVideos(youtubeId);
 
     const videoPromises = videos.map(async (video) => {
 
@@ -67,18 +64,20 @@ export default class VideoLoader {
   // Eventually refactor to cache and load a diff based on a last-retrieved timestamp
   // and conditionally retrieve using ETag. We'll also need to paginate through
   // the committee's channel's videos. For now, just get the first page of results.
-  async loadVideos(committeeId) {
+  async loadVideos(youtubeId) {
 
     const channelPlaylistsUrl = 'https://www.googleapis.com/youtube/v3/channels';
     const playlistParams = {
       key: this.apiKey,
-      id: this.channelIds[committeeId],
+      id: youtubeId,
       part: 'contentDetails',
     };
 
     const playlistResponse = await got.get(channelPlaylistsUrl, {
       searchParams: playlistParams,
       responseType: 'json'
+    }).catch((err) => {
+      console.log(`Error getting channel for Channel ID ${youtubeId}: ${err.message}`);
     });
     const uploadsPlaylistId = playlistResponse.body.items[0].contentDetails.relatedPlaylists.uploads;
 
@@ -95,6 +94,8 @@ export default class VideoLoader {
     const videosResponse = await got.get(videosBaseUrl, {
       searchParams: videosParams,
       responseType: 'json'
+    }).catch((err) => {
+      console.log(`Error getting playlist items for ${committeeId} (Playlist ID: ${uploadsPlaylistId}): ${err.message}`);
     });
     
     return videosResponse.body.items;

@@ -12,6 +12,9 @@ const schema = mongoose.Schema({
     unique: true,
     required: true
   },
+  meetingDate: {
+    type: Date
+  },
   publishedDate: {
     type: Date,
     required: true

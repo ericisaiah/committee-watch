@@ -3,6 +3,7 @@ import mongoose from 'mongoose';
 import CSVWriter from 'csv-writer';
 import fs from 'fs';
 import google from '@googleapis/sheets';
+import moment from 'moment';
 
 import CommitteeEventSchema from '../models/CommitteeEvent.js';
 import CommitteeDataLoader from './CommitteeDataLoader.js';
@@ -108,6 +109,7 @@ export default class GdocWriter {
       'Chamber',
       'Committee Name',
       'Event ID',
+      'Meeting at',
       'Published at',
       'Title',
       'Status', // Make sure this is 5th column (i.e. == TAGGED_STATUS_COLUMN_INDEX)
@@ -134,7 +136,8 @@ export default class GdocWriter {
       columns.push(committee.type);
       columns.push(committee.name);
       columns.push(event.eventId);
-      columns.push(event.publishedDate);
+      columns.push(moment(event.meetingDate).format('YYYY-MM-DD'));
+      columns.push(moment(event.publishedDate).format('YYYY-MM-DD'));
       columns.push(event.title);
       columns.push(event.taggedStatus());
       columns.push(event.youTubeLink());

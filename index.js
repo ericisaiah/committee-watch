@@ -1,7 +1,9 @@
+import _ from 'lodash';
 import dotenv from 'dotenv';
 import express from 'express';
 import mongoose from 'mongoose';
 import fs from 'fs';
+import got from 'got';
 import YAML from 'yaml';
 
 import CommitteeDataLoader from './services/CommitteeDataLoader.js';
@@ -15,9 +17,9 @@ const app       = express();
 const port      = 3000;
 
 // Eventually run this every X hours
-// cron.schedule('* * * * *', runProofOfConcept);
+// cron.schedule('* * * * *', main);
 
-const runProofOfConcept = async () => {
+const main = async () => {
 
   try {
     await mongoose.connect(process.env.DATABASE_URL, {
@@ -34,32 +36,42 @@ const runProofOfConcept = async () => {
   console.log(`Loading committee list...`);
 
   // For testing purposes, here's a sample of 1 committee:
-  const exampleCommitteeListFile = fs.readFileSync('./config/sources/example_committee_list.yml', 'utf8');
-  const committeeList = YAML.parse(exampleCommitteeListFile);
+  // const exampleCommitteeListFile = fs.readFileSync('./config/sources/example_committee_list.yml', 'utf8');
+  // const committeeList = YAML.parse(exampleCommitteeListFile);
 
   // Grab the full committees list from @unitedstates
-  // const sourcesFile = fs.readFileSync('./config/sources/external.yml', 'utf8');
-  // const sources = YAML.parse(sourcesFile);  
-  // const committeeListYaml = await got.get(sources.committeesList);
-  // const committeeList = YAML.parse(committeeListYaml);
+  const sourcesFile = fs.readFileSync('./config/sources/external.yml', 'utf8');
+  const sources = YAML.parse(sourcesFile);
+  const committeeListYaml = await got.get(sources.committeesList)
+    .then((response) => {
+      return response.body;
+    })
+    .catch((err) => {
+      console.log("Error: Cannot reach committee list.");
+      process.exit(1);
+    });
+
+  const committeeListRaw = YAML.parse(committeeListYaml);
+  const committeeList = _.filter(committeeListRaw, { type: 'house' });
 
   console.log("Done.");
 
   const committeeDataLoadingPromises = committeeList.map(async (committee) => {
-      
-    const committeeId = committee.thomas_id;
-    const committeeName = committee.name;
 
-    console.log(`Getting list of events for ${committeeName}...`);
+    if (!committee.youtube_id) {
+      return;
+    }
+
+    console.log(`Getting list of events for ${committee.name}...`);
 
     const committeeLoader = new CommitteeDataLoader();
     await committeeLoader.loadNewEvents(committee);
     
     console.log("Done.");
-    console.log(`Getting list of videos for ${committeeName} and matching them to events...`);
+    console.log(`Getting list of videos for ${committee.name} and matching them to events...`);
 
     const videoLoader = new VideoLoader(process.env.GOOGLE_API_KEY);
-    await videoLoader.loadAndMatch(committeeId);
+    await videoLoader.loadAndMatch(committee.youtube_id);
 
     console.log("Done.");
   });
@@ -89,5 +101,5 @@ const runProofOfConcept = async () => {
 // As a proof of concept, a server is pointless, and this could even be a lambda
 // function, but eventually this should be run as a cron job to refresh data every x hours.
 //
-// app.listen(port, runProofOfConcept);
-runProofOfConcept();
+// app.listen(port, main);
+main();
