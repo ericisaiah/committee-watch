@@ -34,7 +34,10 @@ export default class CommitteeDataLoader {
     // Also not yet implemented: we'll want to load only the events since the last
     // time we fetched them versus the feed's pubDate.
     const response = await got.get(committeeFeedUrl);
-    const jsonFeed = xmlParser.parse(response.body);
+    const jsonFeed = xmlParser.parse(response.body, {
+      ignoreAttributes: false,
+      parseAttributeValue: true
+    });
 
     try {
       jsonFeed.rss.channel.item.forEach(async (eventItem) => {
@@ -60,9 +63,22 @@ export default class CommitteeDataLoader {
           return;
         }
 
+        // Grab the meta data for the event
+        const meetingXml = await got.get(eventItem.enclosure['@_url'])
+          .then((response) => {
+            return xmlParser.parse(response.body, {
+              ignoreAttributes: false,
+              parseAttributeValue: true
+            });
+          })
+          .catch((err) => {
+            console.log(`Error loading meeting XML for ${eventItem.guid}: ${err.message}`);
+          });
+
         await self.CommitteeEvent.findOneAndUpdate({ eventId: eventItem.guid }, {
           committeeId: committee.thomas_id,
-          title: eventItem.title,
+          eventType: meetingXml['committee-meeting']['@_meeting-type'],
+          title: this.normalizeTitle(eventItem.title),
           committeeEventUrl: eventItem.link,
           description: eventItem.description,
           meetingDate: parsedMeetingDate,
@@ -80,7 +96,24 @@ export default class CommitteeDataLoader {
   }
 
   getAllEvents() {
-    return this.CommitteeEvent.find();
+    return this.CommitteeEvent.find()
+      .sort('committeeId -meetingDate');
+  }
+
+  // Hearing titles inconsistently use quotes and periods.
+  // If they have these, then remove.
+  normalizeTitle(title) {
+    if (title[0] === '“' || title[0] === '"') {
+      title = title.substring(1);
+    }
+    if (title[title.length - 1] === '“' || title[title.length - 1] === '"') {
+      title = title.substring(0, title.length - 1);
+    }
+    if (title[title.length - 1] === '.') {
+      title = title.substring(0, title.length - 1);
+    }
+
+    return title;
   }
 
 }

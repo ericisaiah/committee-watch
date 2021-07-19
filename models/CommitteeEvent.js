@@ -12,6 +12,11 @@ const schema = mongoose.Schema({
     unique: true,
     required: true
   },
+  eventType: {
+    type: String,
+    index: true,
+    required: true
+  },
   meetingDate: {
     type: Date
   },
@@ -49,6 +54,12 @@ schema.static('taggedLabels', {
   "noEventId": "No event ID on video",
   "noVideoMatch": "No video match",
   "tagOK": "Event ID correctly on video"
+});
+
+schema.static('eventTypeLabels', {
+  "HHRG": "Hearing",
+  "HMTG": "Meeting",
+  "HMKP": "Markup"
 });
 
 schema.method('youTubeLink', function() { // Can't use => functions because this won't be bound to document

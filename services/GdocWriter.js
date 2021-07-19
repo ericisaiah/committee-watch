@@ -108,12 +108,13 @@ export default class GdocWriter {
       'Chamber',
       'Committee Name',
       'Event ID',
-      'Meeting at',
-      'Published at',
+      'Event Date',
+      'Event Type',
       'Title',
       'Status', // Make sure this is 5th column (i.e. == TAGGED_STATUS_COLUMN_INDEX)
       'YouTube Link',
-      'Event Link'
+      'Event Link',
+      'Published Date',
     ];
 
     const csvWriter = new CSVWriter.createArrayCsvWriter({
@@ -136,11 +137,12 @@ export default class GdocWriter {
       columns.push(committee.name);
       columns.push(event.eventId);
       columns.push(moment(event.meetingDate).format('YYYY-MM-DD'));
-      columns.push(moment(event.publishedDate).format('YYYY-MM-DD'));
+      columns.push(this.CommitteeEvent.eventTypeLabels[event.eventType]);
       columns.push(event.title);
       columns.push(event.taggedStatus());
       columns.push(event.youTubeLink());
       columns.push(event.committeeEventUrl);
+      columns.push(moment(event.publishedDate).format('YYYY-MM-DD'));
 
       return csvWriter.writeRecords([columns])
         .catch((err) => {
