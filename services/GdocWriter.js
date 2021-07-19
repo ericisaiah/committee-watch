@@ -87,7 +87,6 @@ export default class GdocWriter {
 
       return sheets.spreadsheets.batchUpdate(updateRequestBody)
         .then(() => {
-          console.log("Done.");
           return true;
         })
         .catch((err) => {

@@ -54,26 +54,19 @@ const main = async () => {
   const committeeListRaw = YAML.parse(committeeListYaml);
   const committeeList = _.filter(committeeListRaw, { type: 'house' });
 
-  console.log("Done.");
-
   const committeeDataLoadingPromises = committeeList.map(async (committee) => {
 
     if (!committee.youtube_id) {
       return;
     }
 
-    console.log(`Getting list of events for ${committee.name}...`);
-
     const committeeLoader = new CommitteeDataLoader();
     await committeeLoader.loadNewEvents(committee);
-    
-    console.log("Done.");
+
     console.log(`Getting list of videos for ${committee.name} and matching them to events...`);
 
     const videoLoader = new VideoLoader(process.env.GOOGLE_API_KEY);
     await videoLoader.loadAndMatch(committee.youtube_id);
-
-    console.log("Done.");
   });
 
   await Promise.all(committeeDataLoadingPromises);
