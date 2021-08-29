@@ -66,7 +66,7 @@ const main = async () => {
     console.log(`Getting list of videos for ${committee.name} and matching them to events...`);
 
     const videoLoader = new VideoLoader(process.env.GOOGLE_API_KEY);
-    await videoLoader.loadAndMatch(committee.youtube_id);
+    await videoLoader.loadAndMatch(committee.thomas_id, committee.youtube_id);
   });
 
   await Promise.all(committeeDataLoadingPromises);

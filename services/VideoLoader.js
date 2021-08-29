@@ -1,6 +1,5 @@
+import _ from 'lodash';
 import mongoose from 'mongoose';
-import fs from 'fs';
-import YAML from 'yaml';
 import got from 'got';
 
 import CommitteeEventSchema from '../models/CommitteeEvent.js';
@@ -14,10 +13,10 @@ export default class VideoLoader {
   }
 
   // Each committee's hearings' YouTube videos should be 'tagged' with the LOC
-  // event ID in the title or description fields in the format "EventID=12345"
-  async loadAndMatch(youtubeId) {
+  // event ID in the title or description fields in the format "EventID=12345" or "Event ID=12345"
+  async loadAndMatch(committeeId, youtubeId) {
     
-    const EVENT_ID_REGEX = /EventID\=(\d+)/i;
+    const EVENT_ID_REGEX = /Event\s?ID\s?\=\s?(\d+)/i;
 
     const videos = await this.loadVideos(youtubeId);
 
@@ -45,16 +44,33 @@ export default class VideoLoader {
         taggedIn: null
       };
 
-      // For now, taggedIn !== null is the same as ID !== null, but we can also
-      // match video titles to events titles, which would mean that we could
-      // have a video's ID without the EventID being present in the title or
-      // description. We could also fuzzy match titles in the future.
-
+      // taggedIn !== null is the same as event ID !== null
       if (parsedEventId) {
         eventUpdateAttributes.taggedIn = taggedIn;
         await this.CommitteeEvent.findOneAndUpdate({ eventId: parsedEventId }, eventUpdateAttributes);
       } else {
-        await this.CommitteeEvent.findOneAndUpdate({ title: video.snippet.title }, eventUpdateAttributes);
+        // Check for an exact title match between a committee's events and titles
+        const updatedDoc = await this.CommitteeEvent.findOneAndUpdate({
+          committeeId: committeeId,
+          title: video.snippet.title
+        }, eventUpdateAttributes);
+
+        // Check to see if the title of this video contains ANY of the committee's event titles
+        if (!updatedDoc) {
+          let committeeEvents = await this.CommitteeEvent.find({ committeeId: committeeId });
+          const checkAllCommitteeEventsPromises = committeeEvents.map(async (committeeEvent) => {
+            try {
+              if (video.snippet.title.match(committeeEvent.title)) {
+                await this.CommitteeEvent.findOneAndUpdate({
+                  eventId: committeeEvent.eventId
+                }, eventUpdateAttributes);
+              }
+            } catch (err) {
+              console.log(`Error matching title: ${err.message}: "${committeeEvent.title}" in "${video.snippet.title}"`)
+            }
+          });
+          await Promise.all(checkAllCommitteeEventsPromises);
+        }
       }
     });
 
@@ -83,21 +99,34 @@ export default class VideoLoader {
 
     const videosBaseUrl = 'https://www.googleapis.com/youtube/v3/playlistItems';
 
-    const videosParams = {
-      key: this.apiKey,
-      playlistId: uploadsPlaylistId,
-      part: 'snippet',
-      fields: 'items(snippet(title,description,resourceId(videoId)))',
-      maxResults: 50
-    };
+    let allVideos = [];
+    let pagesToGoBack = 15 // Only go back 50 x 15 = 750 videos back, if they exist
+    let currentPage = 0;
+    let nextPageToken = null;
 
-    const videosResponse = await got.get(videosBaseUrl, {
-      searchParams: videosParams,
-      responseType: 'json'
-    }).catch((err) => {
-      console.log(`Error getting playlist items for ${committeeId} (Playlist ID: ${uploadsPlaylistId}): ${err.message}`);
-    });
-    
-    return videosResponse.body.items;
+    while (currentPage === 0 || (nextPageToken && currentPage < pagesToGoBack )) {
+
+      const videosParams = {
+        key: this.apiKey,
+        playlistId: uploadsPlaylistId,
+        part: 'snippet',
+        fields: 'nextPageToken,items(snippet(title,description,resourceId(videoId)))',
+        maxResults: 50,
+        pageToken: nextPageToken
+      };
+
+      const videosResponse = await got.get(videosBaseUrl, {
+        searchParams: videosParams,
+        responseType: 'json'
+      }).catch((err) => {
+        console.log(`Error getting playlist items for ${committeeId} (Playlist ID: ${uploadsPlaylistId}): ${err.message}`);
+      });
+
+      allVideos = allVideos.concat(videosResponse.body.items);
+      nextPageToken = videosResponse.body.nextPageToken;
+      currentPage++;
+    }
+
+    return allVideos;
   }
 }

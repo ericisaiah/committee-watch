@@ -20,6 +20,11 @@ const schema = mongoose.Schema({
   meetingDate: {
     type: Date
   },
+  closedOrPostponed: {
+    type: Boolean,
+    required: true,
+    default: false
+  },
   publishedDate: {
     type: Date,
     required: true
@@ -53,7 +58,8 @@ const schema = mongoose.Schema({
 schema.static('taggedLabels', {
   "noEventId": "No event ID on video",
   "noVideoMatch": "No video match",
-  "tagOK": "Event ID correctly on video"
+  "tagOK": "Event ID correctly on video",
+  "noVideo": "No video expected"
 });
 
 schema.static('eventTypeLabels', {
@@ -71,14 +77,18 @@ schema.method('youTubeLink', function() { // Can't use => functions because this
 });
 
 schema.method('taggedStatus', function() { // Can't use =>
-  if (!this.taggedIn) {
-    if (this.youtubeId) {
-      return this.constructor.taggedLabels.noEventId;
-    } else {
-      return this.constructor.taggedLabels.noVideoMatch;
-    }
+  if (this.closedOrPostponed) {
+    return this.constructor.taggedLabels.noVideo;
   } else {
-    return this.constructor.taggedLabels.tagOK;
+    if (!this.taggedIn) {
+      if (this.youtubeId) {
+        return this.constructor.taggedLabels.noEventId;
+      } else {
+        return this.constructor.taggedLabels.noVideoMatch;
+      }
+    } else {
+      return this.constructor.taggedLabels.tagOK;
+    }
   }
 });
 

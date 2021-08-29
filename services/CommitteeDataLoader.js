@@ -1,4 +1,3 @@
-
 import mongoose from 'mongoose';
 import xmlParser from 'fast-xml-parser';
 import got from 'got';
@@ -43,7 +42,8 @@ export default class CommitteeDataLoader {
       jsonFeed.rss.channel.item.forEach(async (eventItem) => {
 
         let parsedMeetingDate,
-            parsedPublishedDate;
+            parsedPublishedDate,
+            parsedClosedOrPostponedStatus;
 
         try {
           parsedMeetingDate = moment(eventItem.description.match(/Meeting Date\:\s(\w+\,\s\w+\s\d+\,\s\d+\s\d+\:\d+\s\w{2})/)[0]);
@@ -63,6 +63,16 @@ export default class CommitteeDataLoader {
           return;
         }
 
+        try {
+          parsedClosedOrPostponedStatus = eventItem.title.match(/\(Closed\)/i) !== null;
+          if (!parsedClosedOrPostponedStatus) {
+            parsedClosedOrPostponedStatus = eventItem.title.match(/Postponed/i) !== null;
+          }
+        } catch(err) {
+          parsedClosedOrPostponedStatus = false;
+          console.log(`Error parsing closed or postponed status: ${err.message} - ${eventItem.title}`);
+        }
+
         // Grab the meta data for the event
         const meetingXml = await got.get(eventItem.enclosure['@_url'])
           .then((response) => {
@@ -78,6 +88,7 @@ export default class CommitteeDataLoader {
         await self.CommitteeEvent.findOneAndUpdate({ eventId: eventItem.guid }, {
           committeeId: committee.thomas_id,
           eventType: meetingXml['committee-meeting']['@_meeting-type'],
+          closedOrPostponed: parsedClosedOrPostponedStatus,
           title: this.normalizeTitle(eventItem.title),
           committeeEventUrl: eventItem.link,
           description: eventItem.description,
@@ -106,7 +117,7 @@ export default class CommitteeDataLoader {
     if (title[0] === '“' || title[0] === '"') {
       title = title.substring(1);
     }
-    if (title[title.length - 1] === '“' || title[title.length - 1] === '"') {
+    if (title[title.length - 1] === '”' || title[title.length - 1] === '"') {
       title = title.substring(0, title.length - 1);
     }
     if (title[title.length - 1] === '.') {
