@@ -43,23 +43,34 @@ const schema = mongoose.Schema({
   youtubeId: {
     type: String
   },
-  youtubeTitle: String,
-  youtubeDescription: String,
+  youtubeTitle: {
+    type: String
+  },
+  youtubeDescription: {
+    type: String
+  },
+  presumedVideoId: {
+    type: String
+  },
+  presumedVideoTitle: {
+    type: String
+  },
   taggedIn: {
     type: String,
     index: true
   },
-  lastRetrievedVideo: {
+  lastUpdatedData: {
     type: Date,
     required: true
   }
 });
 
 schema.static('taggedLabels', {
-  "noEventId": "No event ID on video",
+  "noEventId": "No event ID on video - exact match found",
   "noVideoMatch": "No video match",
   "tagOK": "Event ID correctly on video",
-  "noVideo": "No video expected"
+  "noVideo": "No video expected",
+  "presumedVideoMatchFound": "No event ID on video - presumed match found"
 });
 
 schema.static('eventTypeLabels', {
@@ -68,9 +79,9 @@ schema.static('eventTypeLabels', {
   "HMKP": "Markup"
 });
 
-schema.method('youTubeLink', function() { // Can't use => functions because this won't be bound to document
-  if (this.youtubeId) {
-    return `https://www.youtube.com/watch?v=${this.youtubeId}`;
+schema.static('youTubeLink', function(videoId) { // Can't use => functions because this won't be bound to document
+  if (videoId) {
+    return `https://www.youtube.com/watch?v=${videoId}`;
   } else {
     return null;
   }
@@ -83,6 +94,8 @@ schema.method('taggedStatus', function() { // Can't use =>
     if (!this.taggedIn) {
       if (this.youtubeId) {
         return this.constructor.taggedLabels.noEventId;
+      } else if (this.presumedVideoId) {
+        return this.constructor.taggedLabels.presumedVideoMatchFound;
       } else {
         return this.constructor.taggedLabels.noVideoMatch;
       }

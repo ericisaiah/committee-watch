@@ -113,6 +113,8 @@ export default class GdocWriter {
       'Title',
       'Status', // Make sure this is 5th column (i.e. == TAGGED_STATUS_COLUMN_INDEX)
       'YouTube Link',
+      'Presumed Video Link',
+      'Presumed Video Title',
       'Event Link',
       'Published Date',
     ];
@@ -140,7 +142,9 @@ export default class GdocWriter {
       columns.push(this.CommitteeEvent.eventTypeLabels[event.eventType]);
       columns.push(event.title);
       columns.push(event.taggedStatus());
-      columns.push(event.youTubeLink());
+      columns.push(this.CommitteeEvent.youTubeLink(event.youtubeId));
+      columns.push(this.CommitteeEvent.youTubeLink(event.presumedVideoId));
+      columns.push(event.presumedVideoTitle);
       columns.push(event.committeeEventUrl);
       columns.push(moment(event.publishedDate).format('YYYY-MM-DD'));
 

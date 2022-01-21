@@ -67,6 +67,7 @@ const main = async () => {
 
     const videoLoader = new VideoLoader(process.env.GOOGLE_API_KEY);
     await videoLoader.loadAndMatch(committee.thomas_id, committee.youtube_id);
+    await videoLoader.matchMissingVideos(committee.thomas_id, committee.youtube_id);
   });
 
   await Promise.all(committeeDataLoadingPromises);

@@ -94,7 +94,7 @@ export default class CommitteeDataLoader {
           description: eventItem.description,
           meetingDate: parsedMeetingDate,
           publishedDate: parsedPublishedDate,
-          lastRetrievedVideo: Date.now()
+          lastUpdatedData: Date.now()
         }, {
           upsert: true
         }).catch((err) => {

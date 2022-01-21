@@ -1,6 +1,7 @@
 import _ from 'lodash';
 import mongoose from 'mongoose';
 import got from 'got';
+import moment from 'moment';
 
 import CommitteeEventSchema from '../models/CommitteeEvent.js';
 
@@ -12,13 +13,19 @@ export default class VideoLoader {
     this.apiKey = apiKey;
   }
 
-  // Each committee's hearings' YouTube videos should be 'tagged' with the LOC
-  // event ID in the title or description fields in the format "EventID=12345" or "Event ID=12345"
-  async loadAndMatch(committeeId, youtubeId) {
+  /**
+   * Each committee's hearings' YouTube videos should be 'tagged' with the LOC
+   * event ID in the title or description fields in the format "EventID=12345" or "Event ID=12345"
+   */
+  async loadAndMatch(committeeId, youtubeChannelId) {
     
     const EVENT_ID_REGEX = /Event\s?ID\s?\=\s?(\d+)/i;
 
-    const videos = await this.loadVideos(youtubeId);
+    const videos = await this.loadVideos(youtubeChannelId);
+
+    if (!videos) {
+      return;
+    }
 
     const videoPromises = videos.map(async (video) => {
 
@@ -77,15 +84,48 @@ export default class VideoLoader {
     return Promise.all(videoPromises);
   }
 
-  // Eventually refactor to cache and load a diff based on a last-retrieved timestamp
-  // and conditionally retrieve using ETag. We'll also need to paginate through
-  // the committee's channel's videos. For now, just get the first page of results.
-  async loadVideos(youtubeId) {
+  /**
+   * For all the committee events missing videos, search for videos in a
+   * general YouTube video search and assign the first hit as the presumed
+   * match.
+   */
+  async matchMissingVideos(committeeId, youtubeChannelId) {
+
+    const committeeEvents = await this.CommitteeEvent.find({
+      committeeId: committeeId,
+      closedOrPostponed: false,
+      youtubeId: null,
+      presumedVideoId: null
+    });
+
+    const searchPromises = committeeEvents.map(async (event) => {
+      const videoSearchResult = await this.searchVideo(youtubeChannelId, event.title, event.meetingDate);
+
+      if (videoSearchResult) {
+        try {
+          await this.CommitteeEvent.findOneAndUpdate({ eventId: event.eventId }, {
+            presumedVideoId: videoSearchResult.videoId,
+            presumedVideoTitle: videoSearchResult.title
+          });
+        } catch(err) {
+          console.log(`Error saving presumed video id and title: ${err.message}: "${videoSearchResult.title}" (${videoSearchResult.videoId}) for Event ID ${event.eventId}`);
+        }
+      }
+    });
+
+    return Promise.all(searchPromises);
+  }
+
+  /**
+   * Eventually refactor to cache and load a diff based on a last-retrieved timestamp
+   * and conditionally retrieve using ETag
+   */
+  async loadVideos(youtubeChannelId) {
 
     const channelPlaylistsUrl = 'https://www.googleapis.com/youtube/v3/channels';
     const playlistParams = {
       key: this.apiKey,
-      id: youtubeId,
+      id: youtubeChannelId,
       part: 'contentDetails',
     };
 
@@ -93,8 +133,13 @@ export default class VideoLoader {
       searchParams: playlistParams,
       responseType: 'json'
     }).catch((err) => {
-      console.log(`Error getting channel for Channel ID ${youtubeId}: ${err.message}`);
+      console.log(`Error getting channel for Channel ID ${youtubeChannelId}: ${err.message}`);
     });
+
+    if (!playlistResponse) {
+      return;
+    }
+
     const uploadsPlaylistId = playlistResponse.body.items[0].contentDetails.relatedPlaylists.uploads;
 
     const videosBaseUrl = 'https://www.googleapis.com/youtube/v3/playlistItems';
@@ -119,8 +164,12 @@ export default class VideoLoader {
         searchParams: videosParams,
         responseType: 'json'
       }).catch((err) => {
-        console.log(`Error getting playlist items for ${committeeId} (Playlist ID: ${uploadsPlaylistId}): ${err.message}`);
+        console.log(`Error getting playlist items for Channel ID ${youtubeChannelId} (Playlist ID: ${uploadsPlaylistId}): ${err.message}`);
       });
+
+      if (!videosResponse) {
+        return;
+      }
 
       allVideos = allVideos.concat(videosResponse.body.items);
       nextPageToken = videosResponse.body.nextPageToken;
@@ -128,5 +177,35 @@ export default class VideoLoader {
     }
 
     return allVideos;
+  }
+
+  async searchVideo(youtubeChannelId, title, eventDate) {
+    const searchUrl = 'https://www.googleapis.com/youtube/v3/search';
+    const searchParams = {
+      key: this.apiKey,
+      part: 'snippet',
+      type: 'video',
+      channelId: youtubeChannelId,
+      publishedAfter: moment(eventDate).subtract(4, 'weeks').toISOString(),
+      publishedBefore: moment(eventDate).add(4, 'weeks').toISOString(),
+      fields: 'items(snippet(title,description),id(videoId))',
+      q: title
+    };
+
+    const searchResponse = await got.get(searchUrl, {
+      searchParams: searchParams,
+      responseType: 'json'
+    }).catch((err) => {
+      console.log(`Error searching for '${title}' for Channel ID ${youtubeChannelId}: ${err.message}`);
+    });
+
+    if (searchResponse && searchResponse.body.items.length > 0) {
+      return {
+        videoId: searchResponse.body.items[0].id.videoId,
+        title: searchResponse.body.items[0].snippet.title
+      };
+    } else {
+      return null;
+    }
   }
 }
